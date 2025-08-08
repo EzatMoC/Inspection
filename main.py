@@ -64,50 +64,54 @@ checklist_data = {
     ]
 }
 
-st.set_page_config(page_title="🔥 Fire Safety Inspection Report", layout="wide")
-st.title("🔥 Fire Safety Inspection Report")
+st.set_page_config(page_title="Fire Safety Inspection Report", layout="wide")
+st.title("Fire Safety Inspection Report")
 
 st.header("📤 Uploads")
 client_name = st.text_input("Client Name")
 location = st.text_input("Location")
 inspection_date = st.date_input("Inspection Date")
 
-st.header("✅ Sample Checklist")
+st.header("Sample Checklist")
 for section, questions in checklist_data.items():
-    st.subheader(f"📌 {section}")
+    st.subheader(f"{section}")
     for i, q in enumerate(questions):
         col1, col2, col3 = st.columns([2, 3, 2])
         with col1:
-            st.markdown(f"🔸 **{q}**")
+            st.markdown(f"**{q}**")
             status = st.radio("Status", ["Yes", "No", "N/A"], key=f"status_{section}_{i}", horizontal=True)
         with col2:
             note = st.text_area("Observations / Notes", height=150, key=f"note_{section}_{i}")
         with col3:
             uploaded_file = st.file_uploader("Media", type=["jpg", "jpeg", "png"], key=f"media_{section}_{i}")
 
-if st.button("📝 Generate PDF Report"):
+if st.button("Generate PDF Report"):
     filename = "inspection_report.pdf"
     doc = SimpleDocTemplate(filename, pagesize=A4)
     story = []
     styles = getSampleStyleSheet()
 
     # Header
-    story.append(Paragraph("🔥 Fire Safety Inspection Report", styles["Title"]))
+    story.append(Paragraph("Fire Safety Inspection Report", styles["Title"]))
     story.append(Paragraph(f"Client Name: {client_name}", styles["Normal"]))
     story.append(Paragraph(f"Location: {location}", styles["Normal"]))
     story.append(Paragraph(f"Inspection Date: {inspection_date}", styles["Normal"]))
     story.append(Spacer(1, 20))
 
+    # Inspector info
+    inspector_name = st.text_input("Inspector Name")
+    signature_image = st.file_uploader("Upload Signature", type=["png", "jpg", "jpeg"])
+
     # Checklist
     for section, questions in checklist_data.items():
-        story.append(Paragraph(f"📌 {section}", styles["Heading2"]))
+        story.append(Paragraph(f"{section}", styles["Heading2"]))
         story.append(Spacer(1, 5))
         for i, q in enumerate(questions):
             status = st.session_state.get(f"status_{section}_{i}", "")
             note = st.session_state.get(f"note_{section}_{i}", "")
             image = st.session_state.get(f"media_{section}_{i}", None)
 
-            story.append(Paragraph(f"<b>🔸 {q}</b>", styles["Normal"]))
+            story.append(Paragraph(f"<b> {q}</b>", styles["Normal"]))
             story.append(Paragraph(f"🟢 Status: <i>{status}</i>", styles["Normal"]))
             story.append(Paragraph(f"📝 Comment: <i>{note}</i>", styles["Normal"]))
 
@@ -120,8 +124,26 @@ if st.button("📝 Generate PDF Report"):
 
             story.append(Spacer(1, 15))
 
-    doc.build(story)
+# Add inspector name and signature to the report
+story.append(Spacer(1, 20))
+story.append(Paragraph(f"Inspector Name: <b>{inspector_name}</b>", styles["Normal"]))
+
+if signature_image is not None:
+    sig_path = "temp_signature.jpg"
+    with open(sig_path, "wb") as f:
+        f.write(signature_image.read())
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("Signature:", styles["Normal"]))
+    story.append(RLImage(sig_path, width=100))
+    os.remove(sig_path)
+
+# Build the final PDF including inspector info
+doc.build(story)
+
+with open(filename, "rb") as f:
+    st.download_button("Download PDF Report", f, file_name=filename)
+
 
     with open(filename, "rb") as f:
-        st.download_button("📄 Download PDF Report", f, file_name=filename)
+        st.download_button("Download PDF Report", f, file_name=filename)
 
