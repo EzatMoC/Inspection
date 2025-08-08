@@ -20,14 +20,63 @@ nfpa_codes = [
     "NFPA 70: Electrical Code"
 ]
 
+# Extracted checklist from PDF
 checklist_data = {
     "FIRE DETECTION & ALARM SYSTEM (FDAS)": [
         "Main Panel – Working / Not working",
-        "Batteries Available – Yes / No"
+        "Batteries Available – Yes / No",
+        "Detectors installed – Yes / No",
+        "Manual Call Points (MCPs) – Installed & working / Not working",
+        "Fire Alarm Hooter / Bell – Installed & working / Not working",
+        "Cables & Conduits are secured",
+        "Zone chart fixed"
     ],
     "EMERGENCY & EXIT LIGHTS": [
         "Exit Lights Installed",
-        "Emergency Lights Installed"
+        "Emergency Lights Installed",
+        "Working with battery backup"
+    ],
+    "FIRE EXTINGUISHERS": [
+        "Installed in required areas",
+        "Proper types (CO2, DCP, Water, Foam) as per hazard",
+        "Accessible, visible, labeled, sealed",
+        "Annual maintenance done"
+    ],
+    "FIRE HOSE REELS": [
+        "Installed near exit doors",
+        "Hose reel cabinet is accessible",
+        "No leakage or damage in hose & nozzle",
+        "Water pressure available"
+    ],
+    "FIRE PUMP ROOM": [
+        "Main & standby pumps operational",
+        "Diesel engine operational",
+        "Pump room accessible & clean",
+        "Pressure gauge & valves functional"
+    ],
+    "SPRINKLER SYSTEM": [
+        "Sprinklers installed as per coverage",
+        "Sprinklers not painted or blocked",
+        "Control valves open & locked",
+        "Alarm valves functioning"
+    ],
+    "FIRE EXIT / STAIRCASE": [
+        "Exit doors not locked/blocked",
+        "Staircases clear from obstruction",
+        "Emergency lights in exit path",
+        "Exit signs illuminated"
+    ],
+    "GAS CYLINDERS / LPG AREA": [
+        "Installed in well-ventilated area",
+        "Regulators in good condition",
+        "No leakage detected",
+        "Safety signage available"
+    ],
+    "BUILDING GENERAL": [
+        "No combustible waste stored near exits",
+        "Electrical panels covered",
+        "No exposed live wires",
+        "Proper housekeeping maintained"
     ]
 }
 
@@ -66,7 +115,6 @@ for section, questions in checklist_data.items():
 inspector_name = st.text_input("Inspector Name")
 signature_image = st.file_uploader("Upload Signature", type=["jpg", "jpeg", "png"], key="signature")
 email_to = st.text_input("Email the report to")
-
 filename = "inspection_report.pdf"
 
 def generate_pdf():
@@ -74,30 +122,20 @@ def generate_pdf():
     story = []
     styles = getSampleStyleSheet()
 
-    # Images
-    row = []
+    logo_path, site_path = None, None
     if company_logo:
         logo_path = "temp_logo.jpg"
         with open(logo_path, "wb") as f:
             f.write(company_logo.getbuffer())
-        row.append(RLImage(logo_path, width=100))
-    else:
-        row.append(Spacer(1, 1))
-
-    row.append(Spacer(1, 20))
-
     if site_image:
         site_path = "temp_site.jpg"
         with open(site_path, "wb") as f:
             f.write(site_image.getbuffer())
-        row.append(RLImage(site_path, width=100))
-    else:
-        row.append(Spacer(1, 1))
 
-    story.extend(row)
+    logo_img = RLImage(logo_path, width=100) if logo_path else Spacer(1, 1)
+    site_img = RLImage(site_path, width=100) if site_path else Spacer(1, 1)
+    story.extend([logo_img, Spacer(1, 10), site_img, Spacer(1, 20)])
 
-    # Title and client info
-    story.append(Spacer(1, 20))
     story.append(Paragraph("Fire Safety Inspection Report", styles["Title"]))
     story.append(Paragraph(f"Client Name: {client_name}", styles["Normal"]))
     story.append(Paragraph(f"Location: {location}", styles["Normal"]))
@@ -130,7 +168,6 @@ def generate_pdf():
         story.append(RLImage(sig_path, width=100))
         os.remove(sig_path)
 
-    # QR code
     qr = qrcode.make("https://your-download-link.com/report")
     buf = BytesIO()
     qr.save(buf)
@@ -148,9 +185,6 @@ def generate_pdf():
 def send_email():
     if not email_to:
         st.warning("Please provide an email address")
-        return
-    if not os.path.exists(filename):
-        st.error("PDF file not found. Please generate the report first.")
         return
     msg = EmailMessage()
     msg['Subject'] = 'Fire Safety Inspection Report'
@@ -173,11 +207,12 @@ if st.button("PDF Report"):
     st.success("PDF report generated!")
 
 if st.button("Send Email"):
+    generate_pdf()
     send_email()
 
-if os.path.exists(filename):
-    with open(filename, "rb") as f:
-        st.download_button("Download Report", f, file_name=filename)
+with open(filename, "rb") as f:
+    st.download_button("Download Report", f, file_name=filename)
+
 
 
 
