@@ -4,7 +4,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 import os
 
-# Your full checklist
+# Checklist
 checklist_data = {
     "FIRE DETECTION & ALARM SYSTEM (FDAS)": [
         "Main Panel – Working / Not working",
@@ -64,17 +64,26 @@ checklist_data = {
     ]
 }
 
+# Page setup
 st.set_page_config(page_title="Fire Safety Inspection Report", layout="wide")
 st.title("Fire Safety Inspection Report")
 
+# Inputs
 st.header("📤 Uploads")
 client_name = st.text_input("Client Name")
 location = st.text_input("Location")
 inspection_date = st.date_input("Inspection Date")
 
+company_logo = st.file_uploader("Upload Company Logo", type=["jpg", "jpeg", "png"])
+site_image = st.file_uploader("Upload Site Image", type=["jpg", "jpeg", "png"])
+
+inspector_name = st.text_input("Inspector Name")
+signature_image = st.file_uploader("Upload Inspector Signature", type=["jpg", "jpeg", "png"])
+
+# Checklist
 st.header("Sample Checklist")
 for section, questions in checklist_data.items():
-    st.subheader(f"{section}")
+    st.subheader(section)
     for i, q in enumerate(questions):
         col1, col2, col3 = st.columns([2, 3, 2])
         with col1:
@@ -83,13 +92,23 @@ for section, questions in checklist_data.items():
         with col2:
             note = st.text_area("Observations / Notes", height=150, key=f"note_{section}_{i}")
         with col3:
-            uploaded_file = st.file_uploader("Media", type=["jpg", "jpeg", "png"], key=f"media_{section}_{i}")
+            st.file_uploader("Media", type=["jpg", "jpeg", "png"], key=f"media_{section}_{i}")
 
+# PDF generation
 if st.button("Generate PDF Report"):
     filename = "inspection_report.pdf"
     doc = SimpleDocTemplate(filename, pagesize=A4)
     story = []
     styles = getSampleStyleSheet()
+
+    # Add company logo
+    if company_logo:
+        logo_path = "temp_logo.jpg"
+        with open(logo_path, "wb") as f:
+            f.write(company_logo.read())
+        story.append(RLImage(logo_path, width=120))
+        story.append(Spacer(1, 12))
+        os.remove(logo_path)
 
     # Header
     story.append(Paragraph("Fire Safety Inspection Report", styles["Title"]))
@@ -98,51 +117,53 @@ if st.button("Generate PDF Report"):
     story.append(Paragraph(f"Inspection Date: {inspection_date}", styles["Normal"]))
     story.append(Spacer(1, 20))
 
-    # Inspector info
-    inspector_name = st.text_input("Inspector Name")
-    signature_image = st.file_uploader("Upload Signature", type=["png", "jpg", "jpeg"])
-
-    # Checklist
+    # Checklist data
     for section, questions in checklist_data.items():
-        story.append(Paragraph(f"{section}", styles["Heading2"]))
-        story.append(Spacer(1, 5))
+        story.append(Paragraph(section, styles["Heading2"]))
         for i, q in enumerate(questions):
             status = st.session_state.get(f"status_{section}_{i}", "")
             note = st.session_state.get(f"note_{section}_{i}", "")
             image = st.session_state.get(f"media_{section}_{i}", None)
 
-            story.append(Paragraph(f"<b> {q}</b>", styles["Normal"]))
+            story.append(Paragraph(f"<b>{q}</b>", styles["Normal"]))
             story.append(Paragraph(f"🟢 Status: <i>{status}</i>", styles["Normal"]))
             story.append(Paragraph(f"📝 Comment: <i>{note}</i>", styles["Normal"]))
 
             if image:
-                img_path = f"temp_{q.replace(' ', '_')}.jpg"
+                img_path = f"temp_{section}_{i}.jpg"
                 with open(img_path, "wb") as f:
                     f.write(image.getbuffer())
                 story.append(RLImage(img_path, width=200))
                 os.remove(img_path)
 
-            story.append(Spacer(1, 15))
+            story.append(Spacer(1, 12))
 
-# Add inspector name and signature to the report
-story.append(Spacer(1, 20))
-story.append(Paragraph(f"Inspector Name: <b>{inspector_name}</b>", styles["Normal"]))
+    # Site photo
+    if site_image:
+        site_path = "temp_site.jpg"
+        with open(site_path, "wb") as f:
+            f.write(site_image.read())
+        story.append(Spacer(1, 20))
+        story.append(Paragraph("📸 Site Image:", styles["Normal"]))
+        story.append(RLImage(site_path, width=300))
+        os.remove(site_path)
 
-if signature_image is not None:
-    sig_path = "temp_signature.jpg"
-    with open(sig_path, "wb") as f:
-        f.write(signature_image.read())
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("Signature:", styles["Normal"]))
-    story.append(RLImage(sig_path, width=100))
-    os.remove(sig_path)
+    # Inspector name and signature
+    story.append(Spacer(1, 20))
+    story.append(Paragraph(f"Inspector Name: <b>{inspector_name}</b>", styles["Normal"]))
+    if signature_image:
+        sig_path = "temp_signature.jpg"
+        with open(sig_path, "wb") as f:
+            f.write(signature_image.read())
+        story.append(Spacer(1, 10))
+        story.append(Paragraph("Signature:", styles["Normal"]))
+        story.append(RLImage(sig_path, width=100))
+        os.remove(sig_path)
 
-doc.build(story)
+    # Build the PDF
+    doc.build(story)
 
-with open(filename, "rb") as f:
-    st.download_button("Download PDF Report", f, file_name=filename)
-
-
+    # Download
     with open(filename, "rb") as f:
-        st.download_button("Download PDF Report", f, file_name=filename)
+        st.download_button("📥 Download PDF Report", f, file_name=filename)
 
