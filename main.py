@@ -74,20 +74,30 @@ def generate_pdf():
     story = []
     styles = getSampleStyleSheet()
 
+    # Images
+    row = []
     if company_logo:
         logo_path = "temp_logo.jpg"
         with open(logo_path, "wb") as f:
             f.write(company_logo.getbuffer())
-        story.append(RLImage(logo_path, width=100))
-        os.remove(logo_path)
+        row.append(RLImage(logo_path, width=100))
+    else:
+        row.append(Spacer(1, 1))
+
+    row.append(Spacer(1, 20))
 
     if site_image:
         site_path = "temp_site.jpg"
         with open(site_path, "wb") as f:
             f.write(site_image.getbuffer())
-        story.append(RLImage(site_path, width=100))
-        os.remove(site_path)
+        row.append(RLImage(site_path, width=100))
+    else:
+        row.append(Spacer(1, 1))
 
+    story.extend(row)
+
+    # Title and client info
+    story.append(Spacer(1, 20))
     story.append(Paragraph("Fire Safety Inspection Report", styles["Title"]))
     story.append(Paragraph(f"Client Name: {client_name}", styles["Normal"]))
     story.append(Paragraph(f"Location: {location}", styles["Normal"]))
@@ -120,7 +130,7 @@ def generate_pdf():
         story.append(RLImage(sig_path, width=100))
         os.remove(sig_path)
 
-    # Generate QR code
+    # QR code
     qr = qrcode.make("https://your-download-link.com/report")
     buf = BytesIO()
     qr.save(buf)
@@ -138,6 +148,9 @@ def generate_pdf():
 def send_email():
     if not email_to:
         st.warning("Please provide an email address")
+        return
+    if not os.path.exists(filename):
+        st.error("PDF file not found. Please generate the report first.")
         return
     msg = EmailMessage()
     msg['Subject'] = 'Fire Safety Inspection Report'
@@ -160,11 +173,11 @@ if st.button("PDF Report"):
     st.success("PDF report generated!")
 
 if st.button("Send Email"):
-    generate_pdf()
     send_email()
 
-with open(filename, "rb") as f:
-    st.download_button("Download Report", f, file_name=filename)
+if os.path.exists(filename):
+    with open(filename, "rb") as f:
+        st.download_button("Download Report", f, file_name=filename)
 
 
 
