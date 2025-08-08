@@ -137,7 +137,6 @@ if signature_image is not None:
     story.append(RLImage(sig_path, width=100))
     os.remove(sig_path)
 
-# Build the final PDF including inspector info
 doc.build(story)
 
 with open(filename, "rb") as f:
